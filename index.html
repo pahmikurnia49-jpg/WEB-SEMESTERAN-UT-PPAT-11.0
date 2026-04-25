@@ -435,12 +435,13 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.1/firebase-app.js";
-        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.1/firebase-firestore.js";
+        import { getDatabase, ref, set, get, child } from "https://www.gstatic.com/firebasejs/10.12.1/firebase-database.js";
 
-        // Konfigurasi Baru Untuk UT X PONPES
+        // Konfigurasi UT X PONPES
         const firebaseConfig = {
             apiKey: "AIzaSyAldYK8Ul8EXyWvwSzpV1ItX9DNSBCvwCw",
             authDomain: "ut-x-ponpes.firebaseapp.com",
+            databaseURL: "https://ut-x-ponpes-default-rtdb.firebaseio.com", // WAJIB ADA UNTUK REALTIME DB
             projectId: "ut-x-ponpes",
             storageBucket: "ut-x-ponpes.firebasestorage.app",
             messagingSenderId: "295849729835",
@@ -448,42 +449,52 @@
         };
 
         const fApp = initializeApp(firebaseConfig);
-        window.db = getFirestore(fApp);
+        window.db = getDatabase(fApp);
         
-        // Fungsi untuk menembak seluruh data aplikasi ke Firebase
         window.fsSaveData = async function(appData) {
             try {
-                await setDoc(doc(window.db, "database_ut", "data_utama"), appData);
+                // Menyimpan ke Realtime Database
+                await set(ref(window.db, 'data_utama'), appData);
+                console.log("Auto-Backup ke Firebase Sukses!");
             } catch(e) { 
                 console.error("Gagal menyimpan ke Firebase:", e); 
+                Swal.fire({
+                    toast: true, position: 'top-end', icon: 'error', 
+                    title: 'Gagal Backup! Pastikan koneksi lancar.', 
+                    showConfirmButton: false, timer: 3000
+                });
             }
         };
 
-        // Fungsi Auto-Tarik saat Web Pertama Kali Dibuka
         window.initFirebase = async function() {
             try {
-                const docSnap = await getDoc(doc(window.db, "database_ut", "data_utama"));
-                if (docSnap.exists()) {
-                    // Kalau di brankas udah ada isinya, timpa data lokal dengan data brankas
-                    window.app = docSnap.data();
+                Swal.fire({title: 'Menyinkronkan Data...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
+                
+                const dbRef = ref(window.db);
+                const snapshot = await get(child(dbRef, 'data_utama'));
+                
+                if (snapshot.exists()) {
+                    window.app = snapshot.val();
                     localStorage.setItem('sipantren_v11', JSON.stringify(window.app));
+                    Swal.fire({toast: true, position: 'top-end', icon: 'success', title: 'Data berhasil ditarik!', showConfirmButton: false, timer: 2000});
                     
-                    // Segarkan dashboard kalau admin sudah login
                     if(!document.getElementById('page-login').classList.contains('hidden-section')) {
-                        // Belum login, jadi biarkan saja di halaman depan
+                        // Biarkan di login
                     } else if (typeof initDash === 'function') {
                         initDash();
+                        if(!document.getElementById('view-mahasiswa').classList.contains('hidden-section')) renderMhs();
+                        if(!document.getElementById('view-arsip').classList.contains('hidden-section')) renderArsip();
                     }
                 } else {
-                    // Kalau brankas masih kosong (pertama kali), masukin data lama kamu ke brankas
                     window.fsSaveData(window.app);
+                    Swal.close();
                 }
             } catch(e) {
                 console.error("Gagal menarik data Firebase:", e);
+                Swal.fire('Koneksi Gagal', 'Gagal terhubung ke Database', 'error');
             }
         };
 
-        // Jalankan penarikan data secara otomatis
         window.initFirebase();
     </script>
 
