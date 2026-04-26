@@ -315,14 +315,21 @@
         function renderArsip(){ const t=document.getElementById('table-arsip-body'); t.innerHTML=''; window.app.students.forEach((s,i)=>{ if(!s.archived)return; const f=getFin(s.nim).filter(x=>x.rem>0); const st=f.length?`<span class="text-red-600 font-bold">Hutang Rp ${f.reduce((a,b)=>a+b.rem,0).toLocaleString()}</span>`:`<span class="text-green-600 font-bold">LUNAS</span>`; t.innerHTML+=`<tr><td class="p-4">${s.nama}</td><td class="p-4">${st}</td><td class="p-4 text-center"><button onclick="restore(${i})" class="text-blue-600 font-bold text-xs">Pulihkan</button></td></tr>`; }); }
         function restore(i){ window.app.students[i].archived=false; saveData(); renderArsip(); }
 
-        // FINANCE LOGIC
+// FINANCE LOGIC
         function getFin(nim){
             const s=window.app.students.find(x=>x.nim===nim); if(!s)return[];
             const cur=calcSem(s.m,s.y); let obs=[];
+            
+            // PASTIKAN HARGA BUKAN NaN ATAU KOSONG
+            const p = window.app.conf.prices || {};
+            const hargaUkt = parseInt(p.ukt) || 0;
+            const hargaHer = parseInt(p.her) || 0;
+            const hargaMod = parseInt(p.mod) || 0;
+
             for(let i=1; i<=cur; i++){
-                obs.push({item:`UKT Semester ${i}`, tot:window.app.conf.prices.ukt});
-                obs.push({item:`Heregistrasi Semester ${i}`, tot:window.app.conf.prices.her});
-                obs.push({item:`Modul Semester ${i}`, tot:window.app.conf.prices.mod});
+                obs.push({item:`UKT Semester ${i}`, tot:hargaUkt});
+                obs.push({item:`Heregistrasi Semester ${i}`, tot:hargaHer});
+                obs.push({item:`Modul Semester ${i}`, tot:hargaMod});
             }
             const h=window.app.payments.filter(p=>p.nim===nim);
             return obs.map(o=>{
@@ -428,9 +435,28 @@
         // SETTINGS
         function loadSets(){ document.getElementById('set-admin').value=window.app.conf.admin; document.getElementById('set-city').value=window.app.conf.city; document.getElementById('set-user').value=window.app.auth.u; document.getElementById('set-pass').value=window.app.auth.p; document.getElementById('set-rec').value=window.app.auth.rec; document.getElementById('set-ukt').value=window.app.conf.prices.ukt; document.getElementById('set-her').value=window.app.conf.prices.her; document.getElementById('set-mod').value=window.app.conf.prices.mod; }
         function updateProfilePic(i){ const r=new FileReader(); r.onload=e=>{ window.app.conf.pic=e.target.result; document.getElementById('set-profile-img').src=e.target.result; document.getElementById('head-profile-pic').src=e.target.result; }; r.readAsDataURL(i.files[0]); }
-        function saveSettings(){ window.app.conf.admin=document.getElementById('set-admin').value; window.app.conf.city=document.getElementById('set-city').value; window.app.auth.u=document.getElementById('set-user').value; window.app.auth.p=document.getElementById('set-pass').value; window.app.auth.rec=document.getElementById('set-rec').value; window.app.conf.prices.ukt=parseInt(document.getElementById('set-ukt').value); window.app.conf.prices.her=parseInt(document.getElementById('set-her').value); window.app.conf.prices.mod=parseInt(document.getElementById('set-mod').value); saveData(); initDash(); Swal.fire('Disimpan','','success'); }
-        function backupData(){ const a=document.createElement('a'); a.href="data:text/json;charset=utf-8,"+encodeURIComponent(JSON.stringify(window.app)); a.download="BACKUP.json"; a.click(); }
-        function restoreData(i){ const r=new FileReader(); r.onload=e=>{window.app=JSON.parse(e.target.result); saveData(); location.reload();}; r.readAsText(i.files[0]); }
+        function saveSettings(){ 
+    // Ambil data dari input
+    app.conf.admin = document.getElementById('set-admin').value; 
+    app.conf.city = document.getElementById('set-city').value; 
+    app.auth.u = document.getElementById('set-user').value; 
+    app.auth.p = document.getElementById('set-pass').value; 
+    app.auth.rec = document.getElementById('set-rec').value; 
+    
+    // Ambil harga (pastikan jadi angka/parseInt)
+    app.conf.prices.ukt = parseInt(document.getElementById('set-ukt').value) || 0; 
+    app.conf.prices.her = parseInt(document.getElementById('set-her').value) || 0; 
+    app.conf.prices.mod = parseInt(document.getElementById('set-mod').value) || 0; 
+    
+    // SIMPAN KE LOKAL & FIREBASE
+    saveData(); 
+    if(window.fsSaveData) {
+        window.fsSaveData(app); 
+    }
+    
+    initDash(); 
+    Swal.fire('Berhasil Disimpan','Data pengaturan telah sinkron ke Firebase','success'); 
+}
     </script>
 
     <script type="module">
