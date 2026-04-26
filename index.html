@@ -435,28 +435,23 @@
         // SETTINGS
         function loadSets(){ document.getElementById('set-admin').value=window.app.conf.admin; document.getElementById('set-city').value=window.app.conf.city; document.getElementById('set-user').value=window.app.auth.u; document.getElementById('set-pass').value=window.app.auth.p; document.getElementById('set-rec').value=window.app.auth.rec; document.getElementById('set-ukt').value=window.app.conf.prices.ukt; document.getElementById('set-her').value=window.app.conf.prices.her; document.getElementById('set-mod').value=window.app.conf.prices.mod; }
         function updateProfilePic(i){ const r=new FileReader(); r.onload=e=>{ window.app.conf.pic=e.target.result; document.getElementById('set-profile-img').src=e.target.result; document.getElementById('head-profile-pic').src=e.target.result; }; r.readAsDataURL(i.files[0]); }
-        function saveSettings(){ 
-    // Ambil data dari input
-    app.conf.admin = document.getElementById('set-admin').value; 
-    app.conf.city = document.getElementById('set-city').value; 
-    app.auth.u = document.getElementById('set-user').value; 
-    app.auth.p = document.getElementById('set-pass').value; 
-    app.auth.rec = document.getElementById('set-rec').value; 
-    
-    // Ambil harga (pastikan jadi angka/parseInt)
-    app.conf.prices.ukt = parseInt(document.getElementById('set-ukt').value) || 0; 
-    app.conf.prices.her = parseInt(document.getElementById('set-her').value) || 0; 
-    app.conf.prices.mod = parseInt(document.getElementById('set-mod').value) || 0; 
-    
-    // SIMPAN KE LOKAL & FIREBASE
-    saveData(); 
-    if(window.fsSaveData) {
-        window.fsSaveData(app); 
-    }
-    
-    initDash(); 
-    Swal.fire('Berhasil Disimpan','Data pengaturan telah sinkron ke Firebase','success'); 
-}
+      function saveSettings(){ 
+            window.app.conf.admin=document.getElementById('set-admin').value; 
+            window.app.conf.city=document.getElementById('set-city').value; 
+            window.app.auth.u=document.getElementById('set-user').value; 
+            window.app.auth.p=document.getElementById('set-pass').value; 
+            window.app.auth.rec=document.getElementById('set-rec').value; 
+            
+            // PAKE OR (|| 0) BIAR FIREBASE GAK ERROR KALAU KOSONG
+            window.app.conf.prices.ukt=parseInt(document.getElementById('set-ukt').value) || 0; 
+            window.app.conf.prices.her=parseInt(document.getElementById('set-her').value) || 0; 
+            window.app.conf.prices.mod=parseInt(document.getElementById('set-mod').value) || 0; 
+            
+            saveData(); 
+            initDash(); 
+            Swal.fire('Disimpan','Data pengaturan berhasil disinkronkan.','success'); 
+        }
+
     </script>
 
     <script type="module">
