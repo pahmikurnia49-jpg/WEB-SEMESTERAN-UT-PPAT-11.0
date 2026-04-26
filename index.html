@@ -274,7 +274,6 @@
         // CONFIG
         const def = { auth:{u:'admin',p:'123',rec:'112233'}, conf:{admin:'Admin Keuangan',city:'Cianjur',pic:'',prices:{ukt:1500000,her:700000,mod:500000}}, students:[], payments:[] };
         
-        // MODIFIKASI: Dibuat sebagai variabel global window agar bisa diakses oleh module Firebase
         window.app = JSON.parse(localStorage.getItem('sipantren_v11')) || def;
 
         // AUTH
@@ -284,44 +283,44 @@
 
         // CORE
         function saveData(){ 
-            // 1. Simpan di Lokal
             localStorage.setItem('sipantren_v11', JSON.stringify(window.app)); 
-            
-            // 2. Modifikasi: Tembak ke brankas Google Firestore (Jika fungsi firebasenya sudah nyala)
-            if(window.fsSaveData) {
-                window.fsSaveData(window.app);
-            }
+            if(window.fsSaveData) window.fsSaveData(window.app);
         }
         function nav(id){ document.querySelectorAll('section[id^="view"]').forEach(e=>e.classList.add('hidden-section')); document.getElementById('view-'+id).classList.remove('hidden-section'); document.getElementById('page-title').innerText=id.toUpperCase(); if(id==='mahasiswa')renderMhs(); if(id==='arsip')renderArsip(); if(id==='pembayaran')document.getElementById('pay-date').valueAsDate=new Date(); if(id==='setting')loadSets(); }
         function initDash(){
-            document.getElementById('head-admin-name').innerText=window.app.conf.admin; if(window.app.conf.pic){ document.getElementById('head-profile-pic').src=window.app.conf.pic; document.getElementById('set-profile-img').src=window.app.conf.pic; }
+            if(!window.app.conf) window.app.conf = {admin:'Admin', city:'Cianjur'};
+            document.getElementById('head-admin-name').innerText=window.app.conf.admin || 'Admin'; if(window.app.conf.pic){ document.getElementById('head-profile-pic').src=window.app.conf.pic; document.getElementById('set-profile-img').src=window.app.conf.pic; }
             setInterval(()=>{ const n=new Date(); document.getElementById('clock-time').innerText=n.toLocaleTimeString(); document.getElementById('clock-date').innerText=n.toLocaleDateString(); document.getElementById('dash-smt').innerText=(n.getMonth()+1<=6?"GENAP":"GANJIL"); },1000);
             updateStats();
         }
-        function updateStats(){ document.getElementById('stat-mhs').innerText=window.app.students.filter(s=>!s.archived).length; document.getElementById('stat-kas').innerText="Rp "+window.app.payments.reduce((a,b)=>a+b.amount,0).toLocaleString(); renderLog(); }
-        function renderLog(){ const l=document.getElementById('activity-log'); l.innerHTML=''; const r=window.app.payments.slice(0,5); if(!r.length)l.innerHTML='<li class="text-gray-400 text-center italic">Kosong</li>'; else r.forEach(p=>{ const s=window.app.students.find(x=>x.nim===p.nim); l.innerHTML+=`<li class="border-b pb-2 flex justify-between"><span>Terima Rp ${p.amount.toLocaleString()} dr <b>${s?s.nama:p.nim}</b></span><span class="text-xs text-gray-400">${p.date}</span></li>`; }); }
+        function updateStats(){ document.getElementById('stat-mhs').innerText=(window.app.students||[]).filter(s=>!s.archived).length; document.getElementById('stat-kas').innerText="Rp "+(window.app.payments||[]).reduce((a,b)=>a+b.amount,0).toLocaleString(); renderLog(); }
+        function renderLog(){ const l=document.getElementById('activity-log'); l.innerHTML=''; const r=(window.app.payments||[]).slice(0,5); if(!r.length)l.innerHTML='<li class="text-gray-400 text-center italic">Kosong</li>'; else r.forEach(p=>{ const s=(window.app.students||[]).find(x=>x.nim===p.nim); l.innerHTML+=`<li class="border-b pb-2 flex justify-between"><span>Terima Rp ${p.amount.toLocaleString()} dr <b>${s?s.nama:p.nim}</b></span><span class="text-xs text-gray-400">${p.date}</span></li>`; }); }
 
         // MAHASISWA
         function calcSem(m,y){ const n=new Date(); let s=(n.getFullYear()-y)*2; s+=((n.getMonth()+1<=6?1:2)-(m<=6?1:2))+1; return Math.max(1,s); }
         function saveStudent(e){ e.preventDefault(); const id=document.getElementById('mhs-id').value, nim=document.getElementById('mhs-nim').value; 
+            if(!window.app.students) window.app.students = [];
             if(id==="-1" && window.app.students.find(s=>s.nim===nim)) return Swal.fire('Error','NIM ada','error');
             const d={nim,nama:document.getElementById('mhs-nama').value,fak:document.getElementById('mhs-fak').value,prodi:document.getElementById('mhs-prodi').value,m:parseInt(document.getElementById('mhs-bulan').value),y:parseInt(document.getElementById('mhs-tahun').value),archived:false};
             if(id==="-1")window.app.students.push(d); else {d.archived=window.app.students[id].archived; window.app.students[id]=d;}
             saveData(); renderMhs(); e.target.reset(); document.getElementById('mhs-id').value="-1"; Swal.fire('Sukses','Tersimpan','success');
         }
-        function renderMhs(){ const t=document.getElementById('table-mhs-body'); t.innerHTML=''; window.app.students.forEach((s,i)=>{ if(s.archived)return; t.innerHTML+=`<tr><td class="p-4"><b>${s.nama}</b><br><span class="text-xs text-gray-500">${s.nim}</span></td><td class="p-4">${s.prodi}</td><td class="p-4 text-center font-bold text-green-700">${calcSem(s.m,s.y)}</td><td class="p-4 text-center"><button onclick="editMhs(${i})" class="text-blue-600 mr-2"><i class="fa fa-edit"></i></button><button onclick="archive(${i})" class="text-red-600"><i class="fa fa-archive"></i></button></td></tr>`; }); }
+        function renderMhs(){ const t=document.getElementById('table-mhs-body'); t.innerHTML=''; (window.app.students||[]).forEach((s,i)=>{ if(s.archived)return; t.innerHTML+=`<tr><td class="p-4"><b>${s.nama}</b><br><span class="text-xs text-gray-500">${s.nim}</span></td><td class="p-4">${s.prodi}</td><td class="p-4 text-center font-bold text-green-700">${calcSem(s.m,s.y)}</td><td class="p-4 text-center"><button onclick="editMhs(${i})" class="text-blue-600 mr-2"><i class="fa fa-edit"></i></button><button onclick="archive(${i})" class="text-red-600"><i class="fa fa-archive"></i></button></td></tr>`; }); }
         function editMhs(i){ const s=window.app.students[i]; document.getElementById('mhs-id').value=i; document.getElementById('mhs-nim').value=s.nim; document.getElementById('mhs-nama').value=s.nama; document.getElementById('mhs-fak').value=s.fak; document.getElementById('mhs-prodi').value=s.prodi; document.getElementById('mhs-bulan').value=s.m; document.getElementById('mhs-tahun').value=s.y; document.getElementById('view-mahasiswa').scrollIntoView(); }
         function archive(i){ Swal.fire({title:'Arsipkan?',icon:'warning',showCancelButton:true,confirmButtonColor:'#d33'}).then(r=>{ if(r.isConfirmed){ window.app.students[i].archived=true; saveData(); renderMhs(); } }); }
-        function renderArsip(){ const t=document.getElementById('table-arsip-body'); t.innerHTML=''; window.app.students.forEach((s,i)=>{ if(!s.archived)return; const f=getFin(s.nim).filter(x=>x.rem>0); const st=f.length?`<span class="text-red-600 font-bold">Hutang Rp ${f.reduce((a,b)=>a+b.rem,0).toLocaleString()}</span>`:`<span class="text-green-600 font-bold">LUNAS</span>`; t.innerHTML+=`<tr><td class="p-4">${s.nama}</td><td class="p-4">${st}</td><td class="p-4 text-center"><button onclick="restore(${i})" class="text-blue-600 font-bold text-xs">Pulihkan</button></td></tr>`; }); }
+        function renderArsip(){ const t=document.getElementById('table-arsip-body'); t.innerHTML=''; (window.app.students||[]).forEach((s,i)=>{ if(!s.archived)return; const f=getFin(s.nim).filter(x=>x.rem>0); const st=f.length?`<span class="text-red-600 font-bold">Hutang Rp ${f.reduce((a,b)=>a+b.rem,0).toLocaleString()}</span>`:`<span class="text-green-600 font-bold">LUNAS</span>`; t.innerHTML+=`<tr><td class="p-4">${s.nama}</td><td class="p-4">${st}</td><td class="p-4 text-center"><button onclick="restore(${i})" class="text-blue-600 font-bold text-xs">Pulihkan</button></td></tr>`; }); }
         function restore(i){ window.app.students[i].archived=false; saveData(); renderArsip(); }
 
-// FINANCE LOGIC
+        // FINANCE LOGIC (ANTI-CRASH FIX)
         function getFin(nim){
-            const s=window.app.students.find(x=>x.nim===nim); if(!s)return[];
+            const s=(window.app.students||[]).find(x=>x.nim===nim); if(!s)return[];
             const cur=calcSem(s.m,s.y); let obs=[];
             
-            // PASTIKAN HARGA BUKAN NaN ATAU KOSONG
-            const p = window.app.conf.prices || {};
+            // OBAT FIREBASE RUSAK: Kalau data harga hilang, otomatis bikin baru jadi 0
+            if(!window.app.conf) window.app.conf = {};
+            if(!window.app.conf.prices) window.app.conf.prices = {ukt:0, her:0, mod:0};
+            
+            const p = window.app.conf.prices;
             const hargaUkt = parseInt(p.ukt) || 0;
             const hargaHer = parseInt(p.her) || 0;
             const hargaMod = parseInt(p.mod) || 0;
@@ -331,7 +330,7 @@
                 obs.push({item:`Heregistrasi Semester ${i}`, tot:hargaHer});
                 obs.push({item:`Modul Semester ${i}`, tot:hargaMod});
             }
-            const h=window.app.payments.filter(p=>p.nim===nim);
+            const h=(window.app.payments||[]).filter(p=>p.nim===nim);
             return obs.map(o=>{
                 const pd = h.filter(x=>x.item === o.item).reduce((a,b)=>a+b.amount,0);
                 return {item:o.item, tot:o.tot, pd:pd, rem:o.tot-pd};
@@ -339,27 +338,15 @@
         }
 
         // PAYMENT FIX: Search & UI
-        function handleSearch(k){ const b=document.getElementById('pay-search-results'); if(k.length<1){b.style.display='none';return;} const r=window.app.students.filter(s=>!s.archived&&s.nama.toLowerCase().includes(k.toLowerCase())); b.innerHTML=''; if(r.length){b.style.display='block';r.forEach(s=>{const d=document.createElement('div');d.className='search-item';d.innerText=`${s.nama} (${s.nim})`;d.onclick=()=>{selectPay(s);};b.appendChild(d);});}else b.style.display='none'; }
+        function handleSearch(k){ const b=document.getElementById('pay-search-results'); if(k.length<1){b.style.display='none';return;} const r=(window.app.students||[]).filter(s=>!s.archived&&s.nama.toLowerCase().includes(k.toLowerCase())); b.innerHTML=''; if(r.length){b.style.display='block';r.forEach(s=>{const d=document.createElement('div');d.className='search-item';d.innerText=`${s.nama} (${s.nim})`;d.onclick=()=>{selectPay(s);};b.appendChild(d);});}else b.style.display='none'; }
         
         function selectPay(s){ 
-            document.getElementById('pay-search-input').value=''; 
-            document.getElementById('pay-search-results').style.display='none'; 
-            
-            document.getElementById('selected-student-box').classList.remove('hidden');
-            document.getElementById('selected-student-name').innerText = `${s.nama} (${s.nim})`;
-            document.getElementById('pay-search-input').classList.add('hidden'); 
-            
-            document.getElementById('pay-selected-nim').value=s.nim; 
-            loadDebts(s.nim); loadHist(s.nim); 
+            document.getElementById('pay-search-input').value=''; document.getElementById('pay-search-results').style.display='none'; 
+            document.getElementById('selected-student-box').classList.remove('hidden'); document.getElementById('selected-student-name').innerText = `${s.nama} (${s.nim})`; document.getElementById('pay-search-input').classList.add('hidden'); 
+            document.getElementById('pay-selected-nim').value=s.nim; loadDebts(s.nim); loadHist(s.nim); 
         }
 
-        function resetPaySelection() {
-            document.getElementById('selected-student-box').classList.add('hidden');
-            document.getElementById('pay-search-input').classList.remove('hidden');
-            document.getElementById('debt-list-container').innerHTML = '<p class="text-center text-xs text-gray-400 mt-20">Pilih mahasiswa dulu...</p>';
-            document.getElementById('pay-history-body').innerHTML = '<tr><td colspan="4" class="p-6 text-center text-gray-400">Belum ada data ditampilkan</td></tr>';
-            document.getElementById('pay-selected-nim').value = "";
-        }
+        function resetPaySelection() { document.getElementById('selected-student-box').classList.add('hidden'); document.getElementById('pay-search-input').classList.remove('hidden'); document.getElementById('debt-list-container').innerHTML = '<p class="text-center text-xs text-gray-400 mt-20">Pilih mahasiswa dulu...</p>'; document.getElementById('pay-history-body').innerHTML = '<tr><td colspan="4" class="p-6 text-center text-gray-400">Belum ada data ditampilkan</td></tr>'; document.getElementById('pay-selected-nim').value = ""; }
         
         function loadDebts(nim){
             const c=document.getElementById('debt-list-container'); c.innerHTML='';
@@ -372,86 +359,65 @@
         function calcTotal(){ let t=0; document.querySelectorAll('.pay-check:checked').forEach(c=>t+=parseInt(c.value)); document.getElementById('pay-auto-total').innerText="Rp "+t.toLocaleString(); document.getElementById('pay-amount').value=t; }
         
         function processPayment(){
-            const nim=document.getElementById('pay-selected-nim').value;
-            let money=parseInt(document.getElementById('pay-amount').value);
-            const date=document.getElementById('pay-date').value;
-            const checks=Array.from(document.querySelectorAll('.pay-check:checked'));
-            
+            const nim=document.getElementById('pay-selected-nim').value; let money=parseInt(document.getElementById('pay-amount').value); const date=document.getElementById('pay-date').value; const checks=Array.from(document.querySelectorAll('.pay-check:checked'));
             if(!nim || !money || !checks.length) return Swal.fire('Error','Lengkapi data!','error');
-
+            if(!window.app.payments) window.app.payments = [];
             checks.forEach(c => {
                 if(money <= 0) return;
-                const debt = parseInt(c.value);
-                const item = c.getAttribute('data-item');
-                const pay = Math.min(money, debt);
+                const debt = parseInt(c.value); const item = c.getAttribute('data-item'); const pay = Math.min(money, debt);
                 window.app.payments.unshift({ id:Date.now()+Math.random(), date:date, nim:nim, item:item, amount:pay });
                 money -= pay;
             });
-            
-            saveData(); loadDebts(nim); loadHist(nim); updateStats();
-            document.getElementById('pay-amount').value='';
-            Swal.fire('Berhasil','Pembayaran tersimpan','success');
+            saveData(); loadDebts(nim); loadHist(nim); updateStats(); document.getElementById('pay-amount').value=''; Swal.fire('Berhasil','Pembayaran tersimpan','success');
         }
 
-        function loadHist(nim){ const t=document.getElementById('pay-history-body'); t.innerHTML=''; window.app.payments.filter(p=>p.nim===nim).forEach(p=>{ t.innerHTML+=`<tr><td class="p-3 text-gray-500">${p.date}</td><td class="p-3 font-bold text-gray-700">${p.item}</td><td class="p-3 text-right text-green-600">Rp ${p.amount.toLocaleString()}</td><td class="p-3 text-center"><button onclick="viewNota(${p.id})" class="text-blue-600 text-xs font-bold hover:underline">Nota</button></td></tr>`; }); }
+        function loadHist(nim){ const t=document.getElementById('pay-history-body'); t.innerHTML=''; (window.app.payments||[]).filter(p=>p.nim===nim).forEach(p=>{ t.innerHTML+=`<tr><td class="p-3 text-gray-500">${p.date}</td><td class="p-3 font-bold text-gray-700">${p.item}</td><td class="p-3 text-right text-green-600">Rp ${p.amount.toLocaleString()}</td><td class="p-3 text-center"><button onclick="viewNota(${p.id})" class="text-blue-600 text-xs font-bold hover:underline">Nota</button></td></tr>`; }); }
         function viewNota(id){ const p=window.app.payments.find(x=>x.id==id), s=window.app.students.find(x=>x.nim===p.nim); document.getElementById('n-id').innerText="#"+Math.floor(p.id); document.getElementById('n-date').innerText=p.date; document.getElementById('n-nama').innerText=s.nama; document.getElementById('n-item').innerText=p.item; document.getElementById('n-total').innerText="Rp "+p.amount.toLocaleString(); document.getElementById('modal-nota').classList.remove('hidden'); }
         function downloadNotaPNG(){ html2canvas(document.getElementById('nota-content')).then(c=>{ const a=document.createElement('a'); a.download='NOTA.png'; a.href=c.toDataURL(); a.click(); }); }
 
         // KARTU FIX 
-        function handleSearchCard(k){ const b=document.getElementById('card-search-results'); if(k.length<1){b.style.display='none';return;} const r=window.app.students.filter(s=>s.nama.toLowerCase().includes(k.toLowerCase())); b.innerHTML=''; if(r.length){b.style.display='block';r.forEach(s=>{const d=document.createElement('div');d.className='search-item';d.innerText=s.nama;d.onclick=()=>{renderCard(s);b.style.display='none';document.getElementById('card-search-input').value=s.nama;};b.appendChild(d);});}else b.style.display='none'; }
+        function handleSearchCard(k){ const b=document.getElementById('card-search-results'); if(k.length<1){b.style.display='none';return;} const r=(window.app.students||[]).filter(s=>s.nama.toLowerCase().includes(k.toLowerCase())); b.innerHTML=''; if(r.length){b.style.display='block';r.forEach(s=>{const d=document.createElement('div');d.className='search-item';d.innerText=s.nama;d.onclick=()=>{renderCard(s);b.style.display='none';document.getElementById('card-search-input').value=s.nama;};b.appendChild(d);});}else b.style.display='none'; }
         
         function renderCard(s){
             document.getElementById('card-preview').classList.remove('hidden');
             document.getElementById('c-nama').innerText=s.nama; document.getElementById('c-nim').innerText=s.nim; document.getElementById('c-prodi').innerText=s.prodi; document.getElementById('c-smt').innerText=calcSem(s.m,s.y);
-            
-            const fin = getFin(s.nim);
-            const t = document.getElementById('c-body-debt'); t.innerHTML='';
-            let totalDebt = 0;
+            const fin = getFin(s.nim); const t = document.getElementById('c-body-debt'); t.innerHTML=''; let totalDebt = 0;
             fin.forEach(f => {
-                const myPays = window.app.payments.filter(p => p.nim === s.nim && p.item === f.item);
-                const lastDate = myPays.length > 0 ? myPays[0].date.split('-').reverse().join('/') : '-'; 
-                let status = "";
-                if(f.rem <= 0) status = `<span class="text-green-600 font-bold">LUNAS (✅) <br><span class="text-[10px] text-gray-500">${lastDate}</span></span>`;
-                else if(f.pd > 0) status = `<span class="text-amber-600 font-bold">SISA RP ${f.rem.toLocaleString()}</span>`;
-                else status = `<span class="text-red-600 font-bold">BELUM BAYAR</span>`;
-                if(f.rem > 0) totalDebt += f.rem;
-                t.innerHTML += `<tr><td class="border border-gray-300 p-2">${f.item}</td><td class="border border-gray-300 p-2 text-right">Rp ${f.tot.toLocaleString()}</td><td class="border border-gray-300 p-2 text-right text-gray-500">Rp ${f.pd.toLocaleString()}</td><td class="border border-gray-300 p-2 text-right">${status}</td></tr>`;
+                const myPays = (window.app.payments||[]).filter(p => p.nim === s.nim && p.item === f.item);
+                const lastDate = myPays.length > 0 ? myPays[0].date.split('-').reverse().join('/') : '-'; let status = "";
+                if(f.rem <= 0) status = `<span class="text-green-600 font-bold">LUNAS (✅) <br><span class="text-[10px] text-gray-500">${lastDate}</span></span>`; else if(f.pd > 0) status = `<span class="text-amber-600 font-bold">SISA RP ${f.rem.toLocaleString()}</span>`; else status = `<span class="text-red-600 font-bold">BELUM BAYAR</span>`;
+                if(f.rem > 0) totalDebt += f.rem; t.innerHTML += `<tr><td class="border border-gray-300 p-2">${f.item}</td><td class="border border-gray-300 p-2 text-right">Rp ${f.tot.toLocaleString()}</td><td class="border border-gray-300 p-2 text-right text-gray-500">Rp ${f.pd.toLocaleString()}</td><td class="border border-gray-300 p-2 text-right">${status}</td></tr>`;
             });
             document.getElementById('c-total-debt').innerText = "Rp " + totalDebt.toLocaleString();
-
-            const hTable = document.getElementById('c-body-hist'); hTable.innerHTML = '';
-            const allHistory = window.app.payments.filter(p => p.nim === s.nim);
+            const hTable = document.getElementById('c-body-hist'); hTable.innerHTML = ''; const allHistory = (window.app.payments||[]).filter(p => p.nim === s.nim);
             if(allHistory.length === 0) hTable.innerHTML = '<tr><td colspan="3" class="border border-gray-300 p-2 text-center text-gray-400">Belum ada transaksi</td></tr>';
-            else allHistory.forEach(h => {
-                hTable.innerHTML += `<tr><td class="border border-gray-300 p-2">${h.date.split('-').reverse().join('/')}</td><td class="border border-gray-300 p-2">${h.item}</td><td class="border border-gray-300 p-2 text-right">Rp ${h.amount.toLocaleString()}</td></tr>`;
-            });
-
-            document.getElementById('c-city').innerText=window.app.conf.city; 
-            document.getElementById('c-date').innerText=new Date().toLocaleDateString(); 
-            document.getElementById('c-admin').innerText = window.app.conf.admin;
+            else allHistory.forEach(h => { hTable.innerHTML += `<tr><td class="border border-gray-300 p-2">${h.date.split('-').reverse().join('/')}</td><td class="border border-gray-300 p-2">${h.item}</td><td class="border border-gray-300 p-2 text-right">Rp ${h.amount.toLocaleString()}</td></tr>`; });
+            document.getElementById('c-city').innerText=window.app.conf.city || ''; document.getElementById('c-date').innerText=new Date().toLocaleDateString(); document.getElementById('c-admin').innerText = window.app.conf.admin || '';
         }
         function downloadPDF(){ const el=document.getElementById('card-preview'); html2pdf().set({margin:0,filename:'KARTU_STUDI.pdf',image:{type:'jpeg',quality:0.98},jsPDF:{unit:'mm',format:'a4'}}).from(el).save(); }
 
-        // SETTINGS
-        function loadSets(){ document.getElementById('set-admin').value=window.app.conf.admin; document.getElementById('set-city').value=window.app.conf.city; document.getElementById('set-user').value=window.app.auth.u; document.getElementById('set-pass').value=window.app.auth.p; document.getElementById('set-rec').value=window.app.auth.rec; document.getElementById('set-ukt').value=window.app.conf.prices.ukt; document.getElementById('set-her').value=window.app.conf.prices.her; document.getElementById('set-mod').value=window.app.conf.prices.mod; }
-        function updateProfilePic(i){ const r=new FileReader(); r.onload=e=>{ window.app.conf.pic=e.target.result; document.getElementById('set-profile-img').src=e.target.result; document.getElementById('head-profile-pic').src=e.target.result; }; r.readAsDataURL(i.files[0]); }
-     function saveSettings(){ 
-            window.app.conf.admin=document.getElementById('set-admin').value; 
-            window.app.conf.city=document.getElementById('set-city').value; 
-            window.app.auth.u=document.getElementById('set-user').value; 
-            window.app.auth.p=document.getElementById('set-pass').value; 
-            window.app.auth.rec=document.getElementById('set-rec').value; 
+        // SETTINGS (ANTI-CRASH FIX)
+        function loadSets(){ 
+            // OBAT FIREBASE RUSAK: Pastikan struktur ada sebelum dibaca
+            if(!window.app.conf) window.app.conf = {};
+            if(!window.app.conf.prices) window.app.conf.prices = {ukt:0,her:0,mod:0};
             
-            // PAKE OR (|| 0) BIAR FIREBASE GAK ERROR KALAU KOSONG
-            window.app.conf.prices.ukt=parseInt(document.getElementById('set-ukt').value) || 0; 
-            window.app.conf.prices.her=parseInt(document.getElementById('set-her').value) || 0; 
-            window.app.conf.prices.mod=parseInt(document.getElementById('set-mod').value) || 0; 
-            
-            saveData(); 
-            initDash(); 
-            Swal.fire('Disimpan','Data pengaturan berhasil disinkronkan.','success'); 
+            document.getElementById('set-admin').value=window.app.conf.admin||''; document.getElementById('set-city').value=window.app.conf.city||''; document.getElementById('set-user').value=window.app.auth.u||''; document.getElementById('set-pass').value=window.app.auth.p||''; document.getElementById('set-rec').value=window.app.auth.rec||''; 
+            document.getElementById('set-ukt').value=window.app.conf.prices.ukt||0; document.getElementById('set-her').value=window.app.conf.prices.her||0; document.getElementById('set-mod').value=window.app.conf.prices.mod||0; 
         }
-
+        function updateProfilePic(i){ const r=new FileReader(); r.onload=e=>{ window.app.conf.pic=e.target.result; document.getElementById('set-profile-img').src=e.target.result; document.getElementById('head-profile-pic').src=e.target.result; }; r.readAsDataURL(i.files[0]); }
+        function saveSettings(){ 
+            // OBAT FIREBASE RUSAK: Pastikan struktur ada sebelum ditulis
+            if(!window.app.conf) window.app.conf = {};
+            if(!window.app.conf.prices) window.app.conf.prices = {ukt:0,her:0,mod:0};
+            
+            window.app.conf.admin=document.getElementById('set-admin').value; window.app.conf.city=document.getElementById('set-city').value; window.app.auth.u=document.getElementById('set-user').value; window.app.auth.p=document.getElementById('set-pass').value; window.app.auth.rec=document.getElementById('set-rec').value; 
+            window.app.conf.prices.ukt=parseInt(document.getElementById('set-ukt').value)||0; window.app.conf.prices.her=parseInt(document.getElementById('set-her').value)||0; window.app.conf.prices.mod=parseInt(document.getElementById('set-mod').value)||0; 
+            
+            saveData(); initDash(); Swal.fire('Disimpan','Data berhasil disinkronkan.','success'); 
+        }
+        function backupData(){ const a=document.createElement('a'); a.href="data:text/json;charset=utf-8,"+encodeURIComponent(JSON.stringify(window.app)); a.download="BACKUP.json"; a.click(); }
+        function restoreData(i){ const r=new FileReader(); r.onload=e=>{window.app=JSON.parse(e.target.result); saveData(); location.reload();}; r.readAsText(i.files[0]); }
     </script>
 
     <script type="module">
