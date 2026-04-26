@@ -435,7 +435,7 @@
         // SETTINGS
         function loadSets(){ document.getElementById('set-admin').value=window.app.conf.admin; document.getElementById('set-city').value=window.app.conf.city; document.getElementById('set-user').value=window.app.auth.u; document.getElementById('set-pass').value=window.app.auth.p; document.getElementById('set-rec').value=window.app.auth.rec; document.getElementById('set-ukt').value=window.app.conf.prices.ukt; document.getElementById('set-her').value=window.app.conf.prices.her; document.getElementById('set-mod').value=window.app.conf.prices.mod; }
         function updateProfilePic(i){ const r=new FileReader(); r.onload=e=>{ window.app.conf.pic=e.target.result; document.getElementById('set-profile-img').src=e.target.result; document.getElementById('head-profile-pic').src=e.target.result; }; r.readAsDataURL(i.files[0]); }
-      function saveSettings(){ 
+     function saveSettings(){ 
             window.app.conf.admin=document.getElementById('set-admin').value; 
             window.app.conf.city=document.getElementById('set-city').value; 
             window.app.auth.u=document.getElementById('set-user').value; 
